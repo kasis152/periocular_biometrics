@@ -1,0 +1,18 @@
+%Reading the iage from the user
+[filename pathname] = uigetfile({'*.jpg';'*.bmp'},'File Selector');
+pic1 = strcat(pathname, filename);
+pic1=imread(pic1);
+pic1 = imresize(pic1,[227 227]);
+
+%Extraction of the periocular region from the image
+detector = vision.CascadeObjectDetector('EyePairBig');
+detector.MergeThreshold = 1;
+bbox = step(detector,pic1);
+out = insertObjectAnnotation(pic1,'rectangle',bbox);
+pic2=imcrop(pic1,bbox)
+
+%Classify the image using classify.
+predictedLabels = classify(netTransfer,pic2);
+
+%Show the image and classification result together
+disp(predictedLabels);

@@ -1,0 +1,49 @@
+%To input the folder containing the images and respective labels
+r=uigetdir();
+
+%Creates the datastore for the input images and their corresponding label
+images = imageDatastore(r,...
+    'IncludeSubfolders',true,...
+   'LabelSource','foldernames');
+n=numel(images.Labels);
+m=numel((countEachLabel(images)))/2;
+
+%This loop crops the image to the defined dimension and writes back in the datastore 
+for i = 1:n
+    	a=imread((images.Files{i,1}));
+        a=imcrop(a,bbox);
+        a=imresize(a,[227 227]);
+        imwrite(a,images.Files{i,1});
+        pause(0.0010000); 
+end
+
+%Initialises the pretrained AlexNet network
+net=alexnet;
+
+%This splits the labels into two sets of training anf testing images and finds the number of total labels of different classes
+[trainingImages,testImages] = splitEachLabel(images,0.7,'randomized');
+numTrainImages = numel(trainingImages.Labels);
+trainingLabels = trainingImages.Labels;
+testLabels = testImages.Labels;
+
+%Here we elemimnate the last three layers of the AlexNet neural net and Fully conneced layer  
+layersTransfer=net.Layers(1:end-3);
+layers = [layersTransfer,
+    fullyConnectedLayer(m,'WeightLearnRateFactor',20,'BiasLearnRateFactor',20),
+    softmaxLayer,
+    classificationLayer]
+
+options = trainingOptions('sgdm',...
+    'MiniBatchSize',5,...
+    'MaxEpochs',10,...
+   'InitialLearnRate',0.0001);
+
+%The Training of the neural net
+netfinal = trainNetwork(trainingImages,layers,options);
+
+%Classifying the test images and finding the accuracy achieved
+predictedLabels = classify(netfinal,testImages);
+accuracy = mean(predictedLabels == testLabels);
+
+%saving the Convolutional neural network formed for further testing purposes
+save netfinal;
